@@ -1,12 +1,19 @@
 import React, { useMemo } from 'react';
-import type {Project, Phase, ProjectStatus} from '../types/project';
+import type {Project, Phase,} from '../types/project';
 
 // Properties passed from project detail page to render timeline
 type Props ={
     project: Project;
-    phases?: Phase[];
-    status?: ProjectStatus;
     budgetedDuration: number;
+};
+
+type TimelineHealth = 'Awaiting Schedule' | 'No Schedule' | 'On Track' | 'Over Budget' ;
+
+const statusClasses: Record<TimelineHealth, string> = {
+    'Awaiting Schedule': 'bg-gray-500',
+    'No Schedule': 'bg-yellow-500',
+    'On Track': 'bg-green-500',
+    'Over Budget': 'bg-red-500',
 };
 
 // Component to get the array of phases from the project prop. If it does not exist ot is empty, return null
@@ -72,3 +79,5 @@ return (
     
 };
 export default ProjectTimeline;
+
+// test: quick note for git demo
