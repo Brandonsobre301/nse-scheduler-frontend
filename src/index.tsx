@@ -2,16 +2,16 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
-import reportWebVitals from 'reportWebVitals';
+import { AuthProvider } from './context/AuthContext';
 
-const container = document.getElementById('root') as HTMLElement;
-const root = ReactDOM.createRoot(container);
+const root = ReactDOM.createRoot(
+  document.getElementById('root') as HTMLElement
+);
 
 root.render(
   <React.StrictMode>
-    <App />
+    <AuthProvider>
+      <App />
+    </AuthProvider>
   </React.StrictMode>
 );
-
-// Optional: pass a function to log results, e.g. reportWebVitals(console.log)
-reportWebVitals();

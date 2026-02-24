@@ -1,28 +1,27 @@
 import React, { useState } from 'react';
-import { authAPI } from '../services/api';
-import { Link } from 'react-router-dom';
-import type { User } from '../types/project';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext'; // ✅ Should be ../context (up one level from pages)
 
-type Props = { onLogin: (user: User) => void };
-
-const Login = ({ onLogin }: Props) => {
-  const [credentials, setCredentials] = useState<{ email: string; password: string }>({ email: '', password: '' });
+const Login = () => {
+  const navigate = useNavigate();
+  const { login } = useAuth();
+  
+  const [credentials, setCredentials] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Package email and password into an object and send to API
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    
     try {
-      const response = await authAPI.login(credentials);
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
-      onLogin(response.data.user);
+      await login(credentials.email, credentials.password);
+      console.log('✅ Login successful, navigating to dashboard');
+      navigate('/dashboard', { replace: true });
     } catch (err: any) {
-      console.error('API call FAILED. Error object:', err);
-      setError(err.response?.data?.message || 'Login failed');
+      console.error('❌ Login failed:', err);
+      setError(err.message || 'Login failed');
     } finally {
       setLoading(false);
     }
@@ -56,8 +55,16 @@ const Login = ({ onLogin }: Props) => {
               required
             />
           </div>
-          {error && <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">{error}</div>}
-          <button type="submit" disabled={loading} className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg disabled:opacity-50">
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+              {error}
+            </div>
+          )}
+          <button 
+            type="submit" 
+            disabled={loading} 
+            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg disabled:opacity-50"
+          >
             {loading ? 'Signing In...' : 'Sign In'}
           </button>
         </form>

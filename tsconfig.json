@@ -20,5 +20,5 @@
     },
     "types": ["node", "react", "react-dom", "jest"]
   },
-  "include": ["src"]
+  "include": ["src", "tailwind.config.js"]
 }

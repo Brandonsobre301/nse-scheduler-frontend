@@ -1,16 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ProjectCalculator from '../components/ProjectCalculator';
+import ProjectForm from '../components/ProjectForm';
 import { projectAPI } from '../services/api';
-import type { Project, CalculatorOutputs} from '../types/project';
+import type { Project, CalculatorOutputs } from '../types/project';
 import ProjectTimeline from '../components/ProjectTimeline';
+import { useUserRole } from '../hooks/useUserRole';
 
 const ProjectDetailPage = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { canEdit, isAdmin, role } = useUserRole();
+  
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [calculatorOutputs, setCalculatorOutputs] = useState<CalculatorOutputs>({
     duration: 0,
@@ -31,53 +38,17 @@ const ProjectDetailPage = () => {
     projectAPI.getProject(id)
       .then(res => {
         console.log('API Response:', res.data);
-        let project = res.data;
+        let projectData = res.data;
         
-        // Defensive check - ensure _id exists
-        if (!project._id) {
+        if (!projectData._id) {
           console.error('Project missing _id, using URL param as fallback');
-          project._id = id;  // Use the URL parameter as fallback
+          projectData._id = id;
         }
         
-        // Ensure other required fields exist
-        if (!project.name) project.name = 'Unnamed Project';
-        if (!project.manager) project.manager = 'Unknown Manager';
+        if (!projectData.name) projectData.name = 'Unnamed Project';
+        if (!projectData.manager) projectData.manager = 'Unknown Manager';
         
-        // Add mock phases ONLY for timeline visuals (not connected to calculator)
-        if (!project.phases || project.phases.length === 0) {
-          project.phases = [
-            {
-              _id: '1',
-              name: 'Rough in Phase',
-              startDate: '2024-01-01',
-              endDate: '2024-01-14',
-              status: 'CONFIRMED',
-              progress: 100,
-              assignedTo: ['BS', 'MM']
-            },
-            {
-              _id: '2',
-              name: 'Termination/wiring Phase',
-              startDate: '2024-01-15',
-              endDate: '2024-02-15',
-              status: 'CONFIRMED',
-              progress: 75,
-              assignedTo: ['JS', 'AL']
-            },
-            {
-              _id: '3',
-              name: 'Testing & Trimout Phase',
-              startDate: '2024-02-16',
-              endDate: '2024-03-01',
-              status: 'SCHEDULED',
-              progress: 0,
-              assignedTo: ['QA', 'TE']
-            }
-          ];
-        }
-        
-        console.log('Final project with ID:', project._id);
-        setProject(project);
+        setProject(projectData);
       })
       .catch(err => {
         console.error('Failed to fetch project:', err);
@@ -87,7 +58,24 @@ const ProjectDetailPage = () => {
       .finally(() => setLoading(false));
   }, [id]);
 
-  // ADD THIS: Safe project update handler to preserve data after saving
+  const handleEditProject = async (data: Partial<Project>) => {
+    if (!project?._id) return;
+    
+    try {
+      setIsSubmitting(true);
+      const response = await projectAPI.updateProject(project._id, data);
+      console.log('Updated project:', response.data);
+      setProject(response.data);
+      setShowEditModal(false);
+      alert('Project updated successfully!');
+    } catch (err) {
+      console.error('Failed to update project:', err);
+      alert('Failed to update project. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleProjectUpdate = (updatedProject: Project) => {
     console.log('Updating project state with:', updatedProject);
     
@@ -96,17 +84,15 @@ const ProjectDetailPage = () => {
       return;
     }
     
-    // Preserve critical fields that might get lost in the update
     const safeProject = {
-      ...project,        // Keep ALL existing data (phases, _id, name, manager, etc.)
-      ...updatedProject, // Apply calculator updates from backend
-      _id: project._id,  // Ensure _id is always preserved
-      name: project.name || updatedProject.name, // Preserve name
-      manager: project.manager || updatedProject.manager, // Preserve manager
-      phases: project.phases || []  // Preserve mock phases for timeline
+      ...project,
+      ...updatedProject,
+      _id: project._id,
+      name: project.name || updatedProject.name,
+      manager: project.manager || updatedProject.manager,
+      phases: project.phases || []
     };
     
-    console.log('Safe project update preserving data:', safeProject);
     setProject(safeProject);
   };
 
@@ -115,55 +101,115 @@ const ProjectDetailPage = () => {
 
   return (
     <Layout>
-      <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-        <img src="/NSE.png" alt="NSE Logo" style={{ 
-          width: '160px', 
-          height: '64px', 
-          margin: '0 auto 8px auto' 
-        }} />
-      </div>
-      
-      <div style={{ marginBottom: '32px' }}>
-        <h1 style={{ 
-          fontSize: '32px', 
-          fontWeight: 'bold', 
-          color: '#1f2937', 
-          marginBottom: '8px',
-          textAlign: 'center'
-        }}>
-          {project.name}
-        </h1>
-        <p style={{ 
-          fontSize: '18px', 
-          color: '#6b7280', 
-          textAlign: 'center'
-        }}>
-          Foreman: {project.manager} | Project ID: {project.projectNumber}
-        </p>
+      {/* Navigation Bar */}
+      <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
+        <button
+          onClick={() => navigate('/dashboard')}
+          className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+        >
+          <span>←</span>
+          <span>Back to Dashboard</span>
+        </button>
+        
+        <button
+          onClick={() => navigate('/projects')}
+          className="flex items-center gap-2 px-4 py-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
+        >
+          <span></span>
+          <span>All Projects</span>
+        </button>
       </div>
 
-      {/* Debug info - remove after fixing */}
-      <div style={{
-        backgroundColor: '#fef3c7',
-        padding: '12px',
-        borderRadius: '6px',
-        marginBottom: '16px',
-        fontSize: '14px'
-      }}>
-        {/*DEBUG: Project ID = {project._id || 'MISSING!'} | Name = {project.name} | Manager = {project.manager} */}
+      {/* Centered Logo */}
+      <div className="flex justify-center mb-6">
+        <img 
+          src="/NSE.png" 
+          alt="NSE Logo" 
+          style={{ width: '160px', height: '64px' }}
+          className="object-contain"
+        />
+      </div>
+      
+      {/* Header with Edit Button */}
+      <div className="mb-8">
+        <div className="text-center mb-4">
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">
+            {project.name}
+          </h1>
+          <p className="text-lg text-gray-600">
+            Foreman: {project.manager} | Project: {project.projectNumber ?? project._id.slice(-6).toUpperCase()}
+          </p>
+        </div>
+        
+        {/* Edit Button - Centered below header */}
+        {canEdit && (
+          <div className="flex justify-center">
+            <button
+              onClick={() => setShowEditModal(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            >
+               Edit Project
+            </button>
+          </div>
+        )}
       </div>
 
-      <ProjectCalculator 
-        project={project} 
-        onProjectUpdate={handleProjectUpdate}  // Use the safe handler instead of setProject
-        onOutputsChange={setCalculatorOutputs}
-      />
+      {/* Role indicator (development only) */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className={`p-3 rounded-lg mb-4 text-sm text-center ${
+          canEdit ? 'bg-blue-50 text-blue-700' : 'bg-yellow-50 text-yellow-700'
+        }`}>
+          <strong>Role:</strong> {role.toUpperCase()} | 
+          <strong> Edit Access:</strong> {canEdit ? '✅ ' : '❌ '}
+          {!canEdit && ' (Read-only mode)'}
+        </div>
+      )}
+
+      {/* Calculator section */}
+      {canEdit ? (
+        <ProjectCalculator 
+          project={project} 
+          onProjectUpdate={handleProjectUpdate}
+          onOutputsChange={setCalculatorOutputs}
+        />
+      ) : (
+        <div className="bg-gray-50 p-6 rounded-lg mb-8 text-center">
+          <h2 className="text-xl text-gray-600 mb-2">
+            🔒 Calculator (View Only)
+          </h2>
+          <p className="text-gray-400 mb-4">
+            Contact an admin or manager to edit project calculator values.
+          </p>
+          <div className="text-sm text-gray-700 space-y-1">
+            <p><strong>Total Man-Hours:</strong> {project.totalManHours ?? 'N/A'}</p>
+            <p><strong>Desired Manpower:</strong> {project.desiredManPower ?? 'N/A'}</p>
+            <p><strong>Efficiency:</strong> {project.efficiency ? `${(project.efficiency * 100).toFixed(0)}%` : 'N/A'}</p>
+            <p><strong>Target Duration:</strong> {project.targetDurationWeeks ?? 'N/A'} weeks</p>
+          </div>
+        </div>
+      )}
       
-      {/* Timeline with mock data for visuals only */}
+      {/* Timeline */}
       <ProjectTimeline
         project={project}
         budgetedDuration={calculatorOutputs.duration}
       />
+
+      {/* Edit Project Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <ProjectForm
+                project={project}
+                onSubmit={handleEditProject}
+                onCancel={() => setShowEditModal(false)}
+                isLoading={isSubmitting}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 };

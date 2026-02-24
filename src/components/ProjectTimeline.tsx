@@ -11,6 +11,7 @@ type TimelineHealth = 'Awaiting Schedule' | 'No Schedule' | 'On Track' | 'Over B
 const ProjectTimeline = ({ project, budgetedDuration }: Props) => {
     const phases = useMemo(() => project.phases || [], [project.phases]);
 
+    // cache duration and status calculations
     const actualDuration = useMemo(() => {
         if (phases.length === 0) return 0;
         const startDates = phases.map(p => new Date(p.startDate).getTime());
@@ -20,6 +21,7 @@ const ProjectTimeline = ({ project, budgetedDuration }: Props) => {
         return Math.ceil((maxEnd - minStart) / (1000 * 3600 * 24 * 7));
     }, [phases]);
 
+    // cache status calculations
     const status: TimelineHealth = useMemo(() => {
         if (budgetedDuration === 0) return 'Awaiting Schedule';
         if (actualDuration === 0) return 'No Schedule';

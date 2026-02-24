@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { projectAPI } from '../services/api';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import type { Project, User, ProjectStatus } from '../types/project';
 
 const MetricCard = ({
@@ -26,6 +26,7 @@ const MetricCard = ({
 type Props = { user?: User; onLogout: () => void };
 
 const Dashboard = ({ user, onLogout }: Props) => {
+  const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -49,19 +50,41 @@ const Dashboard = ({ user, onLogout }: Props) => {
 
   return (
     <Layout>
+      {/* Header with Logo */}
       <header className="flex justify-between items-center mb-8">
         <div className="flex items-center space-x-4">
-          <img src="/NSE.png" alt="NSE Logo" className="mx-auto mb-2" style={{ width: '160px', height: '64px' }} />
+          <img 
+            src="/NSE.png" 
+            alt="NSE Logo" 
+            style={{ width: '160px', height: '64px' }}
+            className="object-contain cursor-pointer" 
+            onClick={() => navigate('/dashboard')}
+          />
           <h1 className="text-2xl font-bold text-gray-800">Resource Utilization</h1>
         </div>
         <div className="flex items-center space-x-4">
           <span className="text-gray-600">Welcome, {user?.name || 'User'}</span>
-          <button onClick={onLogout} className="bg-red-500 hover:bg-red-600 text-white text-sm font-bold py-2 px-3 rounded-lg">
+          <button 
+            onClick={onLogout} 
+            className="bg-red-500 hover:bg-red-600 text-white text-sm font-bold py-2 px-3 rounded-lg"
+          >
             Logout
           </button>
         </div>
       </header>
 
+      {/* Quick Navigation */}
+      <div className="flex gap-4 mb-8">
+        <button
+          onClick={() => navigate('/projects')}
+          className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+        >
+          <span>📁</span>
+          <span>View All Projects</span>
+        </button>
+      </div>
+
+      {/* Metric Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <MetricCard title="Active Projects" value={projects.length} change="+2 this month" color="blue" />
         <MetricCard title="Team Members" value="24" change="+3 new hires" color="green" />
@@ -69,8 +92,17 @@ const Dashboard = ({ user, onLogout }: Props) => {
         <MetricCard title="Urgent Deadlines" value="3" change="1 at risk" color="red" />
       </div>
 
+      {/* Projects Table */}
       <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-xl font-semibold mb-4">Active Projects</h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">Active Projects</h2>
+          <button
+            onClick={() => navigate('/projects')}
+            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+          >
+            View All →
+          </button>
+        </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -84,30 +116,55 @@ const Dashboard = ({ user, onLogout }: Props) => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {projects.map((project) => (
-                <tr key={project._id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap font-medium text-blue-600 hover:underline">
-                    <Link to={`/projects/${project._id}`}>{project.name}</Link>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{project.projectNumber}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{project.manager}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {project.deadline ? new Date(project.deadline).toLocaleDateString() : '—'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      project.status === 'Awaiting Schedule'  ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'
-                    }`}>
-                      {project.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="w-full bg-gray-200 rounded-full h-2.5">
-                      <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${project.progress ?? 0}%` }} />
-                    </div>
+              {projects.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                    No projects yet. 
+                    <button 
+                      onClick={() => navigate('/projects')}
+                      className="text-blue-600 hover:underline ml-2"
+                    >
+                      Create your first project
+                    </button>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                projects.map((project) => (
+                  <tr key={project._id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap font-medium text-blue-600 hover:underline">
+                      <Link to={`/projects/${project._id}`}>{project.name}</Link>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {project.projectNumber || `#${project._id.slice(-6).toUpperCase()}`}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {project.manager || 'Unassigned'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {project.deadline ? new Date(project.deadline).toLocaleDateString() : '—'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        project.status === 'On Track' || project.status === 'CONFIRMED'
+                          ? 'bg-green-100 text-green-800' 
+                          : project.status === 'Over Budget' || project.status === 'CONFLICT'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {project.status || 'No Status'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="w-full bg-gray-200 rounded-full h-2.5">
+                        <div 
+                          className="bg-blue-600 h-2.5 rounded-full" 
+                          style={{ width: `${project.progress ?? 0}%` }} 
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

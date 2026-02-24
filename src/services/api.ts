@@ -8,7 +8,16 @@ const API: AxiosInstance = axios.create({
 
 API.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  console.log('📤 Request interceptor:');
+  console.log('  - URL:', config.url);
+  console.log('  - Token found:', !!token);
+  if (token) {
+    console.log('  - Token (first 30 chars):', token.substring(0, 30) + '...');
+    config.headers.Authorization = `Bearer ${token}`;
+    console.log('  - Authorization header set:', config.headers.Authorization.substring(0, 30) + '...');
+  } else {
+    console.error('  ❌ No token in localStorage!');
+  }
   return config;
 });
 
@@ -16,16 +25,16 @@ API.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      localStorage.clear();
-      window.location.href = '/login';
+      console.error('🚨 401 ERROR - NOT AUTO-REDIRECTING:', error.response.data);
+      console.error('Request that failed:', error.config.url);
+      console.error('Auth header that was sent:', error.config.headers.Authorization);
     }
     return Promise.reject(error);
   }
 );
 
-
 export const authAPI = {
-// Make a POST request to the backend API endpoint '/auth/login' with the user's credentials using axios
+  // Make a POST request to the backend API endpoint '/auth/login' with the user's credentials using axios
   login: (credentials: { email: string; password: string }): Promise<AxiosResponse<AuthResponse>> =>
     API.post<AuthResponse>('/auth/login', credentials),
   signup: (userData: { name: string; email: string; password: string; dateOfBirth: string }): Promise<AxiosResponse<unknown>> =>
@@ -45,7 +54,9 @@ export const projectAPI = {
   createProject: (data: Partial<Project>): Promise<AxiosResponse<Project>> =>
     API.post<Project>('/projects', data),
   updateProject: (id: string, data: Partial<Project>): Promise<AxiosResponse<Project>> =>
-    API.put<Project>(`/projects/${id}`, data)
+    API.put<Project>(`/projects/${id}`, data),
+  deleteProject: (id: string): Promise<AxiosResponse<{ message: string }>> =>
+    API.delete(`/projects/${id}`)
 };
 
 export default API;

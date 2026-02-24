@@ -6,7 +6,7 @@ export interface TeamMember {
   role: string;
 }
 
-export type ProjectStatus = 'Awaiting Schedule' | 'No Schedule' | 'On Track' | 'Over Budget';
+export type ProjectStatus = 'Awaiting Schedule' | 'No Schedule' | 'On Track' | 'Over Budget'| 'CONFIRMED'|'SCHEDULED'| 'CONFLICT';
 
 export interface Phase {
   _id?: string;
@@ -31,6 +31,7 @@ export interface Project {
   scope?: string;
   team?: TeamMember[];
   phases?: Phase[];
+
 
   totalManHours?: number;
   desiredManPower?: number;
