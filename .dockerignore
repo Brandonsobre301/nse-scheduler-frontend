@@ -1,0 +1,10 @@
+node_modules
+build
+.env
+.env.local
+.env.*.local
+*.backup
+README/
+.git
+.gitignore
+npm-debug.log*

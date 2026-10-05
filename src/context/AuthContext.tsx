@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import type { User } from '../types/user';
+import { authAPI } from '../services/api';
+import type  {User, UserRole} from '../types/user'
 
 interface AuthContextType {
   user: User | null;
@@ -23,17 +24,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log('🔍 AuthProvider: Checking for stored auth...');
     const token = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
     
     if (token && storedUser) {
       try {
-        const parsedUser = JSON.parse(storedUser);
-        console.log('✅ Restored user:', parsedUser);
-        setUser(parsedUser);
-      } catch (error) {
-        console.error('❌ Failed to parse user:', error);
+        setUser(JSON.parse(storedUser));
+      } catch {
         localStorage.clear();
       }
     }
@@ -41,52 +38,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string): Promise<void> => {
-    console.log('🔐 Attempting login for:', email);
-    
     try {
-      // ✅ FIXED: Correct URL based on your server.ts mounting
-      const res = await fetch('http://localhost:5000/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-      
-      console.log('📡 Response status:', res.status);
-      
-      if (!res.ok) {
-        const errorData = await res.json();
-        console.error('❌ Login failed:', errorData);
-        throw new Error(errorData.error || 'Login failed');
-      }
-      
-      const data = await res.json();
-      console.log('✅ Login response:', data);
-      
-      // Normalize user object to match User type
+      const res = await authAPI.login({ email, password });
+      const data = res.data;
+
       const normalizedUser: User = {
-        _id: data.user._id || data.user.id,
+        _id: data.user._id || data.user.id || '',
         name: data.user.name,
         email: data.user.email,
-        role: data.user.role || 'viewer',
+        role: (data.user.role as UserRole) || 'viewer',
         createdAt: data.user.createdAt
       };
-      
+
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(normalizedUser));
       setUser(normalizedUser);
-      
-      console.log('✅ User state updated:', normalizedUser);
-    } catch (error) {
-      console.error('❌ Login error:', error);
+    } catch (error: any) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       setUser(null);
-      throw error;
+      const message = error.response?.data?.error || error.message || 'Login failed';
+      throw new Error(message);
     }
   };
 
   const logout = () => {
-    console.log('🚪 Logging out');
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);

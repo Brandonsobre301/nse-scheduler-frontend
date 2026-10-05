@@ -33,12 +33,16 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
     status: 'Awaiting Schedule' as ProjectStatus,
     scope: '',
     totalManHours: 0,
-    desiredManPower: 1,
+    desiredManpower: 1,
     efficiency: 0.8,
-    targetDurationWeeks: 0
+    targetDurationWeeks: 0,
+    deadline: '',
+    projectType: '',
+    phases: [] as any[]
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [manpowerInput, setManpowerInput] = useState('1');
 
   // Populate form when editing
   useEffect(() => {
@@ -50,10 +54,14 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
         status: project.status || 'Awaiting Schedule',
         scope: project.scope || '',
         totalManHours: project.totalManHours || 0,
-        desiredManPower: project.desiredManPower || 1,
+        desiredManpower: project.desiredManpower || 1,
         efficiency: project.efficiency || 0.8,
-        targetDurationWeeks: project.targetDurationWeeks || 0
+        targetDurationWeeks: project.targetDurationWeeks || 0,
+        deadline: project.deadline ? new Date(project.deadline).toISOString().split('T')[0] : '',
+        projectType: project.projectType || '',
+        phases: project?.phases || []      
       });
+      setManpowerInput(String(project.desiredManpower || 1));
     }
   }, [project]);
 
@@ -73,6 +81,27 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
     }
   };
 
+  // -- Phase Management Functions (placeholders for now) --
+  const handleAddPhase = () => {
+    setFormData(prev => ({
+      ...prev,
+      phases: [...prev.phases, { name: '', startDate: '', endDate: '', status: 'Planning', progress: 0 }]
+    }));
+  };
+
+  const handlePhaseChange = (index: number, field: string, value: any) => {
+    const updatedPhases = [...formData.phases];
+    updatedPhases[index] = { ...updatedPhases[index], [field]: value };
+    setFormData(prev => ({ ...prev, phases: updatedPhases }));
+  };
+
+  const handleRemovePhase = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      phases: prev.phases.filter((_, i) => i !== index)
+    }));
+  }
+
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -88,8 +117,8 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
       newErrors.totalManHours = 'Man hours cannot be negative';
     }
 
-    if (formData.desiredManPower < 1) {
-      newErrors.desiredManPower = 'Manpower must be at least 1';
+    if (formData.desiredManpower <= 0) {
+      newErrors.desiredManpower = 'Manpower must be greater than 0';
     }
 
     if (formData.efficiency < 0 || formData.efficiency > 1) {
@@ -102,13 +131,19 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validate()) return;
 
-    if (!validate()) {
-      return;
+    const submitData: Partial<any> = { ...formData };
+
+    // Normalise deadline: send ISO string if set, omit if blank
+    if (submitData.deadline) {
+      submitData.deadline = new Date(submitData.deadline).toISOString();
+    } else {
+      delete submitData.deadline;
     }
 
     try {
-      await onSubmit(formData);
+      await onSubmit(submitData);
     } catch (error) {
       console.error('Form submission error:', error);
     }
@@ -196,6 +231,22 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
               ))}
             </select>
           </div>
+
+          {/* Project Type — used by AI efficiency inference */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Project Type
+              <span className="ml-1 text-xs text-blue-500 font-normal">✨ improves AI estimates</span>
+            </label>
+            <input
+              type="text"
+              name="projectType"
+              value={formData.projectType}
+              onChange={handleChange}
+              className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+              placeholder="e.g., Office Tenant Improvement"
+            />
+          </div>
         </div>
 
         {/* Scope */}
@@ -222,8 +273,8 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Total Man Hours */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+          <div className="flex flex-col justify-end">
+            <label className="block text-sm font-medium text-gray-700 mb-2 min-h-[2.5rem] flex items-end">
               Total Man-Hours Budgeted
             </label>
             <input
@@ -243,29 +294,38 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
           </div>
 
           {/* Desired Manpower */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+          <div className="flex flex-col justify-end">
+            <label className="block text-sm font-medium text-gray-700 mb-2 min-h-[2.5rem] flex items-end">
               Desired Manpower
             </label>
             <input
-              type="number"
-              name="desiredManPower"
-              value={formData.desiredManPower}
-              onChange={handleChange}
-              min="1"
+              type="text"
+              inputMode="decimal"
+              value={manpowerInput}
+              onChange={(e) => {
+                const raw = e.target.value;
+                if (raw === '' || /^[0-9]*\.?[0-9]*$/.test(raw)) {
+                  setManpowerInput(raw);
+                  const num = parseFloat(raw);
+                  if (!isNaN(num) && num > 0) {
+                    setFormData(prev => ({ ...prev, desiredManpower: num }));
+                    if (errors.desiredManpower) setErrors(prev => ({ ...prev, desiredManpower: '' }));
+                  }
+                }
+              }}
               className={`w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 ${
-                errors.desiredManPower ? 'border-red-500' : 'border-gray-300'
+                errors.desiredManpower ? 'border-red-500' : 'border-gray-300'
               }`}
               placeholder="e.g., 5"
             />
             {errors.desiredManPower && (
-              <p className="text-red-500 text-sm mt-1">{errors.desiredManPower}</p>
+              <p className="text-red-500 text-sm mt-1">{errors.desiredManpower}</p>
             )}
           </div>
 
           {/* Efficiency */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+          <div className="flex flex-col justify-end">
+            <label className="block text-sm font-medium text-gray-700 mb-2 min-h-[2.5rem] flex items-end">
               Efficiency (0-100%)
             </label>
             <input
@@ -290,8 +350,8 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
           </div>
 
           {/* Target Duration */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+          <div className="flex flex-col justify-end">
+            <label className="block text-sm font-medium text-gray-700 mb-2 min-h-[2.5rem] flex items-end">
               Target Duration (weeks)
             </label>
             <input
@@ -307,6 +367,87 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
           </div>
         </div>
       </div>
+      
+      {/* Phase Builder Section*/}
+      <div className="bg-green-50 p-4 rounded-lg border border-emerald-100">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold text-gray-700 mb-4">Project Phases (Timeline Data)</h3>
+          <button
+           type = "button"
+           onClick={handleAddPhase}
+           className="text-sm bg-emerald-600 text-white px-3 py-1.5 rounded-md hover:bg-emerald-700 transition"
+          >
+            + Add Phase
+          </button>
+        </div>
+
+        {formData.phases.length === 0 ? (
+         <p className ="text-sm text-gray-500 italic text-center py-4 bg-white rounded border-dashed border-gray-300">
+           No phases added yet. Add a phase to generate your Timeline.
+         </p>
+       ) : (
+        <div className="space-y-3">
+          {formData.phases.map((phase, index) => (
+            <div key={index} className="grid grid-cols-12 gap-3 bg-white p-3 rounded border border-gray-200 items-end">
+              <div className="col-span-12 md:col-span-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Phase Name
+                </label>
+                <input
+                  type="text" 
+                  value={phase.name}
+                  onChange={(e)=> handlePhaseChange(index, 'name', e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., Foundation"
+                />
+              </div>
+              <div className="col-span-12 md:col-span-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label> 
+                <input
+                  type="date"
+                  value={phase.startDate ? phase.startDate.split('T')[0] : ''}
+                  onChange={(e) => handlePhaseChange(index, 'startDate', e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="col-span-12 md:col-span-3">
+                <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                <input
+                  type="date"
+                  value={phase.endDate ? phase.endDate.split('T')[0] : ''}
+                  onChange={(e) => handlePhaseChange(index, 'endDate', e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="col-span-12 md:col-span-1 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => handleRemovePhase(index)}
+                  className="text-red-600 hover:text-red-800 transition"
+                  title = "Remove Phase"
+                >
+                  x
+                </button>
+              </div>                
+            </div>
+          ))}
+        </div>
+       )}
+      </div>
+
+        {/*Deadline */}
+        <div>
+          <label className="block text-sm font-medium test-gray-700 mb-1">
+            Deadline
+        </label>
+        <input
+        type="date"
+        name="deadline"
+        value={formData.deadline}
+        onChange={handleChange}
+        className="w-full p-2 border border-gray-300 rounded focus ring-2 focus:ring-blue-500"
+      />
+    </div>
 
       {/* Action Buttons */}
       <div className="flex justify-end gap-4 pt-4 border-t">

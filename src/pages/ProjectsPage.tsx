@@ -43,14 +43,15 @@ const ProjectsPage: React.FC = () => {
     try {
       setIsSubmitting(true);
       const response = await projectAPI.createProject(data);
-      console.log('Created project:', response.data);
+      const createdProject = response.data.project;
+      console.log('Created project:', createdProject);
       
       // Add new project to list
-      setProjects(prev => [...prev, response.data]);
+      setProjects(prev => [...prev, createdProject]);
       setShowCreateModal(false);
       
       // Optionally navigate to the new project
-      navigate(`/projects/${response.data._id}`);
+      navigate(`/projects/${createdProject._id}`);
     } catch (err) {
       console.error('Failed to create project:', err);
       alert('Failed to create project. Please try again.');
@@ -103,7 +104,7 @@ const ProjectsPage: React.FC = () => {
     <Layout>
       <div className="max-w-7xl mx-auto">
         {/* Navigation Bar */}
-        <div className="flex justify-start items-center mb-6 pb-4 border-b border-gray-200">
+        <div className="flex justify-start items-center mb-6 pb-4 border-b border-white-200">
           <button
             onClick={() => navigate('/dashboard')}
             className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
@@ -114,24 +115,26 @@ const ProjectsPage: React.FC = () => {
         </div>
 
         {/* Centered Logo */}
-        <div className="flex justify-center mb-6">
-          <img 
-            src="/NSE.png" 
-            alt="NSE Logo" 
-            style={{ width: '160px', height: '64px' }}
-            className="object-contain"
-          />
+        <div className="relative flex flex-col md:flex-row items-center justify-between rounded-[50px] p-8 md:p-12 bg-slate-50 mx-auto mb-10 w-full shadow-neuromorphic-raised"> 
+          
+          <div className="w-full md:w-[10%] md:mb-0 text-center md:text-left">
+            <h1 className="text-3xl md:text-4xl font-extrabold text-slate-800 tracking-tight">Projects</h1>
+            <p className="text-slate-500 font-medium mt-2">
+              {projects.length} project{projects.length !== 1 ? 's' : ''} total
+          </p>
         </div>
 
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800">Projects</h1>
-            <p className="text-gray-600 mt-1">
-              {projects.length} project{projects.length !== 1 ? 's' : ''} total
-            </p>
-          </div>
+        <div className="relative flex items-center justify-center w-[280px] md:w-[280px] h-[190px] md:h-[70px] bg-white rounded-[40px] md:rounded-[80px] shadow-neuromorphic-raised flex-shrink-0 m6-6 md:mb-0">
           
+          <div className="absolute inset-0 bg-white/20 rounded-[40px] md:rounded-[60px]" style={{ backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,.15) 25%, transparent 25%, transparent 50%, rgba9255,255,255,.15) 50%, rgba(255,255,.12) 75%, transparent 75%, transparent)', backgroundSize: '1rem 1rem'}}></div>
+          
+          <img
+            src="/NSE.png"
+            alt="NSE Logo"
+            className="w-[120px] md:w-[180px] h-auto object-contain relative z-10"
+          />
+          </div>
           {/* Create Button - Only for users who can edit */}
           {canEdit && (
             <button

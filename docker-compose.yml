@@ -1,0 +1,18 @@
+services:
+  frontend:
+    build: .
+    ports:
+      - "3000:80"
+    restart: unless-stopped
+    networks:
+      - app-net
+
+
+
+networks:
+  app-net:
+    external: true
+    name: nse-app-net
+
+ 
+

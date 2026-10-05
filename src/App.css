@@ -36,3 +36,9 @@
     transform: rotate(360deg);
   }
 }
+
+  .shadow-neuromorphic-raised {
+    box-shadow: 10px 10px 30px #e0e6ea,
+               -10px -10px 30px #ffffff,
+               0 0 70px 15px #f0f7f9;
+  }

@@ -3,7 +3,8 @@ import Layout from '../components/Layout';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { projectAPI } from '../services/api';
 import { Link, useNavigate } from 'react-router-dom';
-import type { Project, User, ProjectStatus } from '../types/project';
+import type { Project, ProjectStatus } from '../types/project';
+import type { User } from '../types/user';
 
 const MetricCard = ({
   title, value, change, color
@@ -51,7 +52,7 @@ const Dashboard = ({ user, onLogout }: Props) => {
   return (
     <Layout>
       {/* Header with Logo */}
-      <header className="flex justify-between items-center mb-8">
+      <header className="relative flex felx-col md:flex-row items-center justify-between rounded-[50px] p-8 md:p-12 bg-white mb-10 w-full shadow-neuromorphic-raised">
         <div className="flex items-center space-x-4">
           <img 
             src="/NSE.png" 
@@ -95,7 +96,7 @@ const Dashboard = ({ user, onLogout }: Props) => {
       {/* Projects Table */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Active Projects</h2>
+          <h2 className="text-xl font-semibold">Projects</h2>
           <button
             onClick={() => navigate('/projects')}
             className="text-blue-600 hover:text-blue-800 text-sm font-medium"
