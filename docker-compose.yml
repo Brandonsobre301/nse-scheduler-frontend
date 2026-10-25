@@ -1,18 +1,23 @@
+# Frontend only. Prefer the parent compose at ../docker-compose.yml for the
+# full stack. Expects hostname `backend` on nse-app-net (created by parent
+# compose, or: docker network create nse-app-net).
+
 services:
   frontend:
     build: .
     ports:
       - "3000:80"
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     networks:
       - app-net
-
-
 
 networks:
   app-net:
     external: true
     name: nse-app-net
-
- 
-

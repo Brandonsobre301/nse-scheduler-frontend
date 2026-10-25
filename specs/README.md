@@ -18,4 +18,6 @@ at the repo root — read that first.
 
 ## Existing specs
 
-_(none yet — add entries here as specs are created)_
+| Spec | Status |
+|---|---|
+| [project-sheet.spec.md](./project-sheet.spec.md) | Draft — first MVP slice |
